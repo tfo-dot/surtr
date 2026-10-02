@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lore Engine // Dashboard</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- D3.js for Graph, Marked.js for Markdown -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- EasyMDE Markdown Editor -->
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+    <script
+      src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+    <!-- KaTeX Math Rendering -->
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/katex/dist/contrib/auto-render.min.js"></script>
+    <!-- Mermaid Diagrams -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  </head>
+  <body>
+    <!-- Read-Only Mode Banner -->
+    <div id="readonly-banner"
+      style="display: none; background: rgba(239, 68, 68, 0.95); color: #fff; text-align: center; padding: 8px; font-size: 0.8rem; font-weight: bold; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; letter-spacing: 0.05em; box-shadow: 0 2px 12px rgba(239, 68, 68, 0.3); font-family: var(--font-ui);">
+      ⚠️ READ-ONLY PLAYER MODE ACTIVE — MUTATING AND SAVING ARE DISABLED
+    </div>
+
+    <!-- Background grid animation overlay -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <div class="app-container">
+      <!-- Top Navigation Header -->
+      <header class="main-header">
+        <div class="logo-area">
+          <span class="logo-pulse"></span>
+          <h1
+            class="logo-text">LORE_ENGINE <span class="logo-sub">// KERNEL_GUI</span></h1>
+        </div>
+
+        <div class="control-area">
+          <!-- Mode Toggle -->
+          <div class="toggle-container">
+            <button id="btn-toggle-workspace"
+              class="toggle-btn active">Workspace</button>
+            <button id="btn-toggle-timeline"
+              class="toggle-btn">Timeline</button>
+            <button id="btn-toggle-diagnostics"
+              class="toggle-btn">Diagnostics</button>
+          </div>
+
+          <!-- Vault Selector -->
+          <div class="select-wrapper">
+            <label for="vault-select">ACTIVE_VAULT:</label>
+            <select id="vault-select">
+              <option value="" disabled selected>Select Vault...</option>
+            </select>
+            <button id="btn-new-vault" class="btn btn-secondary"
+              title="Create New Vault"
+              style="padding: 4px 10px; font-size: 1rem; line-height: 1; font-weight: bold; border-color: rgba(255,255,255,0.15);">+</button>
+          </div>
+
+          <!-- Action Buttons -->
+          <button id="btn-add-inbox" class="btn btn-secondary">
+                    <svg class="btn-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    Quick Inbox
+                </button>
+          <button id="btn-reload" class="btn btn-primary">
+                    <svg class="btn-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    Sync
+                </button>
+        </div>
+      </header>
+
+      <!-- Main Workspace -->
+      <div id="workspace-view" class="view-panel active">
+        <main class="workspace-grid">
+          <!-- Left Pane: Vault Explorer -->
+          <section class="pane explorer-pane">
+            <div class="pane-header" style="padding: 0 12px; gap: 8px;">
+              <div class="pane-header-tabs"
+                style="border-bottom: none; padding: 0; margin: 0; gap: 8px;">
+                <button id="tab-explorer" class="tab-btn active"
+                  style="font-size: 0.8rem; padding: 6px 12px;">EXPLORER</button>
+                <button id="tab-tags" class="tab-btn"
+                  style="font-size: 0.8rem; padding: 6px 12px;">TAGS</button>
+              </div>
+              <button id="btn-new-node" class="btn-sm" title="New Wiki Node"
+                style="margin-left: auto;">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="currentColor"
+                    d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                </svg>
+              </button>
+            </div>
+            <div class="search-box">
+              <input type="text" id="node-search"
+                placeholder="Search nodes by ID or tags..." autocomplete="off">
+              <svg class="search-icon" viewBox="0 0 24 24">
+                <path fill="currentColor"
+                  d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+              </svg>
+            </div>
+
+            <!-- Tag Filter Indicator -->
+            <div id="tag-filter-indicator" class="tag-filter-indicator"
+              style="display: none;">
+              <span>Filtered by tag: <strong id="active-tag-filter"></strong></span>
+              <button id="btn-clear-tag-filter"
+                class="btn-clear-tag">&times;</button>
+            </div>
+
+            <div id="explorer-tree" class="tree-container">
+              <div class="empty-state">No active vault selected.</div>
+            </div>
+
+            <div id="explorer-tags" class="tree-container"
+              style="display: none;">
+              <!-- Unique tags rendered dynamically -->
+            </div>
+          </section>
+
+          <!-- Middle Pane: Graph Visualization -->
+          <section class="pane graph-pane">
+            <div class="pane-header">
+              <h2>GRAPH_PREVIEW</h2>
+              <div class="graph-controls" style="display: flex; gap: 8px;">
+                <button id="btn-link-mode" class="btn-sm"
+                  title="Toggle Interactive Link Mode"
+                  style="border-color: rgba(255,255,255,0.15);">Link Mode: Off</button>
+                <button id="btn-reset-zoom" class="btn-sm"
+                  title="Reset Zoom">Fit Graph</button>
+              </div>
+            </div>
+            <div class="graph-canvas-container">
+              <svg id="graph-canvas"></svg>
+
+              <!-- Graph Legend -->
+              <div class="graph-legend">
+                <div
+                  class="legend-item"><span class="legend-dot dot-global"></span> Global</div>
+                <div
+                  class="legend-item"><span class="legend-dot dot-inbox"></span> Inbox</div>
+                <div
+                  class="legend-item"><span class="legend-dot dot-story"></span> Stories</div>
+                <div
+                  class="legend-item"><span class="legend-dot dot-characters"></span> Characters</div>
+                <div
+                  class="legend-item"><span class="legend-dot dot-locations"></span> Locations</div>
+                <div
+                  class="legend-item"><span class="legend-dot dot-definitions"></span> Definitions</div>
+                <div
+                  class="legend-item"><span class="legend-dot dot-topics"></span> Topics</div>
+                <div
+                  class="legend-item"><span class="legend-dot dot-other"></span> Other</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Right Pane: Node Details / Live Editor -->
+          <section class="pane detail-pane">
+            <div class="pane-header-tabs">
+              <button id="tab-preview" class="tab-btn active">PREVIEW</button>
+              <button id="tab-editor" class="tab-btn">SOURCE_EDITOR</button>
+              <button id="tab-split" class="tab-btn">SPLIT_VIEW</button>
+              <button id="tab-outline" class="tab-btn">OUTLINE</button>
+            </div>
+
+            <div class="pane-content-container">
+              <!-- Tab 1: Preview Mode -->
+              <div id="panel-preview" class="tab-panel active">
+                <div
+                  class="empty-detail-state">Select a node from the explorer or graph to preview.</div>
+                <div class="node-viewer" style="display: none;">
+                  <div class="viewer-meta">
+                    <div class="meta-row">
+                      <span class="meta-label">ID:</span>
+                      <span id="view-id" class="meta-value id-badge"></span>
+                      <button id="btn-rename-node" class="btn-sm"
+                        style="margin-left: 8px; padding: 1px 6px; font-size: 0.7rem; border-color: rgba(255,255,255,0.15);"
+                        title="Rename Node ID">Rename</button>
+                    </div>
+                    <div class="meta-row">
+                      <span class="meta-label">NAMESPACE:</span>
+                      <span id="view-namespace"
+                        class="meta-value ns-badge"></span>
+                    </div>
+                    <div class="meta-row">
+                      <span class="meta-label">TITLE:</span>
+                      <span id="view-title" class="meta-value"></span>
+                    </div>
+                    <div id="view-tags-container" class="meta-row"
+                      style="display: none;">
+                      <span class="meta-label">TAGS:</span>
+                      <div id="view-tags" class="tag-list"></div>
+                    </div>
+                    <div id="view-story-arc-row" class="meta-row"
+                      style="display: none;">
+                      <span class="meta-label">STORY ARC:</span>
+                      <button id="btn-read-story-arc"
+                        class="btn btn-secondary btn-sm"
+                        style="padding: 2px 8px; font-size: 0.75rem;">
+                                        Read Full Arc
+                                    </button>
+                    </div>
+                  </div>
+                  <div class="divider"></div>
+                  <div id="view-content" class="markdown-body"></div>
+
+                  <!-- Backlinks Section -->
+                  <div id="backlinks-section" class="backlinks-section"
+                    style="display: none; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                    <h4>Referenced In (Backlinks)</h4>
+                    <div id="backlinks-list" class="backlinks-list"
+                      style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 2: Editor Mode -->
+              <div id="panel-editor" class="tab-panel">
+                <div class="node-editor-form">
+                  <div class="editor-input-group">
+                    <label for="edit-id">NODE_ID</label>
+                    <input type="text" id="edit-id"
+                      placeholder="e.g. main_character or locations/base">
+                  </div>
+
+                  <div class="editor-row">
+                    <div class="editor-input-group">
+                      <label for="edit-namespace">NAMESPACE</label>
+                      <select id="edit-namespace">
+                        <option value="global">Global</option>
+                        <option value="inbox">Inbox</option>
+                        <option value="stories">Stories</option>
+                        <option value="characters">Characters</option>
+                        <option value="locations">Locations</option>
+                        <option value="definitions">Definitions</option>
+                        <option value="topics">Topics</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div class="editor-input-group">
+                      <label for="edit-title">TITLE (Optional)</label>
+                      <input type="text" id="edit-title"
+                        placeholder="Descriptive title">
+                    </div>
+                  </div>
+
+                  <div class="editor-input-group">
+                    <label for="edit-tags">TAGS (Comma separated)</label>
+                    <input type="text" id="edit-tags"
+                      placeholder="cyberpunk, act1, character">
+                  </div>
+
+                  <div class="editor-input-group" id="editor-continuation-group"
+                    style="display: none;">
+                    <label
+                      for="edit-continuation">CONTINUATION STORY PROGRESSION (Optional)</label>
+                    <select id="edit-continuation">
+                      <option value="">None / End of Story</option>
+                    </select>
+                  </div>
+
+                  <div class="editor-input-group textarea-group"
+                    style="position: relative;">
+                    <label for="edit-content">CONTENT (Markdown)</label>
+                    <textarea id="edit-content"
+                      placeholder="# Welcome to your new lore node...
+
+Use [[wiki_links]] to connect to other nodes!"></textarea>
+                    <!-- Link Autocomplete Dropdown -->
+                    <div id="autocomplete-suggestions"
+                      class="autocomplete-suggestions"></div>
+                  </div>
+
+                  <!-- Media Asset Manager Drawer -->
+                  <div class="editor-input-group">
+                    <div class="asset-manager-header">
+                      <label>MEDIA_ASSETS</label>
+                      <button id="btn-upload-file" class="btn-sm" type="button"
+                        style="padding: 2px 8px; font-size: 0.75rem;">Upload Media</button>
+                      <input type="file" id="input-upload-file"
+                        accept="image/*,audio/*"
+                        style="display: none;">
+                    </div>
+                    <div class="asset-drag-zone" id="asset-drag-zone">
+                      <div
+                        class="drag-zone-text">Drag & drop images here or upload to insert</div>
+                      <div id="asset-gallery" class="asset-gallery-grid"></div>
+                    </div>
+                  </div>
+
+                  <div class="editor-actions">
+                    <button id="btn-delete"
+                      class="btn btn-danger">Delete Node</button>
+                    <div class="flex-spacer"></div>
+                    <button id="btn-save"
+                      class="btn btn-primary">Save Node</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 3: Outline Mode -->
+              <div id="panel-outline" class="tab-panel"
+                style="height: 100%; overflow-y: auto;">
+                <div class="outline-container" style="padding: 20px;">
+                  <h3
+                    style="font-size: 0.85rem; letter-spacing: 0.05em; color: var(--color-primary); margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">DOCUMENT_OUTLINE</h3>
+                  <div id="outline-list" class="outline-list"
+                    style="display: flex; flex-direction: column; gap: 8px;">
+                    <div
+                      style="color: var(--color-text-muted); font-size: 0.85rem; font-style: italic;">No headings found in the active node content.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- Diagnostics & Pathfinder View -->
+      <div id="diagnostics-view" class="view-panel">
+        <main class="diagnostics-layout">
+          <!-- Left Column: Diagnostic lists & stats -->
+          <div class="diagnostics-column">
+            <div class="diagnostics-grid">
+              <div class="diag-card">
+                <h3>Vault Stats</h3>
+                <div id="diag-stats-content" class="diag-stats-grid">
+                  <!-- Stats pills go here dynamically -->
+                </div>
+              </div>
+              <div class="diag-card">
+                <h3>Vault Utilities</h3>
+                <p class="diag-desc">Backup and clean vault data.</p>
+                <div style="display: flex; gap: 10px; margin-top: 12px;">
+                  <button id="btn-export-vault" class="btn btn-primary"
+                    style="flex: 1; padding: 8px 12px; font-size: 0.75rem;">Export Vault</button>
+                  <button id="btn-diagnose-assets" class="btn btn-secondary"
+                    style="flex: 1; padding: 8px 12px; font-size: 0.75rem;">Scan Assets</button>
+                </div>
+                <div id="assets-diagnostics-results"
+                  style="margin-top: 12px; font-size: 0.8rem; color: var(--color-text-muted); display: none;">
+                  <span
+                    id="assets-diagnostics-summary">No orphan assets found.</span>
+                  <button id="btn-clean-assets" class="btn btn-danger"
+                    style="display: none; width: 100%; margin-top: 8px; padding: 6px; font-size: 0.7rem;">Delete Unused Assets</button>
+                </div>
+              </div>
+              <div class="diag-card">
+                <h3>Story & Hub Analytics</h3>
+                <p
+                  class="diag-desc">Narrative cycle loops and centrality hubs.</p>
+                <div id="diag-narrative-status"
+                  style="margin-top: 8px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 8px;">
+                  <div
+                    style="color: var(--color-text-muted); font-style: italic;">Load analytics...</div>
+                </div>
+              </div>
+              <div class="diag-card">
+                <h3>Broken Wiki-Links</h3>
+                <p class="diag-desc">Links referencing non-existent nodes.</p>
+                <div id="diag-broken-links" class="diag-list scrollable">
+                  <!-- Dynamic links list -->
+                </div>
+              </div>
+              <div class="diag-card">
+                <h3>Orphan Nodes</h3>
+                <p
+                  class="diag-desc">Existing nodes with no incoming references.</p>
+                <div id="diag-orphans" class="diag-list scrollable">
+                  <!-- Dynamic orphans list -->
+                </div>
+              </div>
+              <div class="diag-card">
+                <h3>Dead Ends</h3>
+                <p
+                  class="diag-desc">Existing nodes with no outgoing references.</p>
+                <div id="diag-dead-ends" class="diag-list scrollable">
+                  <!-- Dynamic dead ends list -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Pathfinder Tool -->
+          <div class="pathfinder-column">
+            <div class="diag-card pathfinder-card">
+              <h3>Lore Pathfinder</h3>
+              <p
+                class="diag-desc">Analyze narrative flow. Finds the shortest path of connections between two nodes.</p>
+              <div class="pathfinder-form">
+                <div class="editor-input-group">
+                  <label for="path-source">SOURCE_NODE</label>
+                  <select id="path-source" class="select-full"></select>
+                </div>
+                <div class="editor-input-group">
+                  <label for="path-target">TARGET_NODE</label>
+                  <select id="path-target" class="select-full"></select>
+                </div>
+                <button id="btn-find-path"
+                  class="btn btn-primary btn-full">Find Connection Path</button>
+              </div>
+              <div id="pathfinder-results" class="pathfinder-results">
+                <div
+                  class="pathfinder-empty">Select source and target nodes to trace connections.</div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- Timeline View -->
+      <div id="timeline-view" class="view-panel">
+        <main class="timeline-layout"
+          style="display: flex; flex-direction: column; height: calc(100vh - 64px); padding: 24px; position: relative;">
+          <div class="pane timeline-pane"
+            style="flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; backdrop-filter: blur(12px);">
+            <div class="pane-header"
+              style="height: 48px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 16px;">
+              <h2
+                style="font-size: 0.9rem; font-weight: 600; letter-spacing: 0.08em; color: var(--color-text);">CHRONOLOGY_FLOW</h2>
+            </div>
+            <div class="timeline-meta"
+              style="padding: 12px 16px; font-size: 0.8rem; color: var(--color-text-muted); border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.15);">
+              Visualizes narrative paths linked via <code>continuation</code> metadata. Click any card to load it in the Workspace.
+            </div>
+            <div id="timeline-container" class="timeline-container scrollable-x"
+              style="flex-grow: 1; overflow-x: auto; padding: 24px; display: flex; flex-direction: column; gap: 32px; background: rgba(12, 12, 14, 0.2);">
+              <div class="timeline-empty"
+                style="color: var(--color-text-muted); font-size: 0.85rem; font-style: italic; text-align: center; margin: auto;">Select a vault with story continuation nodes to visualize.</div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Quick Inbox Entry Modal -->
+    <div id="inbox-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>QUICK_INBOX_ENTRY</h3>
+          <button id="modal-close" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Type prose here to add directly to the vault's inbox. It will save as a timestamped markdown file.</p>
+          <textarea id="inbox-content"
+            placeholder="E.g., Met a new fixer named Mr. Hands in Pacifica. He operates out of the Heavy Hearts club..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-modal-cancel"
+            class="btn btn-secondary">Cancel</button>
+          <button id="btn-modal-submit"
+            class="btn btn-primary">Add to Inbox</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Story Reader Modal Overlay -->
+    <div id="reader-modal" class="modal-overlay">
+      <div class="modal-content reader-modal-content"
+        style="max-width: 800px; width: 90%; height: 85vh; display: flex; flex-direction: column;">
+        <div class="modal-header">
+          <h3 id="reader-story-title"
+            style="letter-spacing: 0.05em;">STORY_ARC_READER</h3>
+          <button id="reader-modal-close"
+            class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body reader-modal-body"
+          style="flex-grow: 1; overflow-y: auto; padding: 24px; background: #0c0c0e;">
+          <div id="reader-story-arc-content" class="reader-sheet">
+            <!-- Sequential story scenes compiled here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Vault Modal Overlay -->
+    <div id="vault-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>CREATE_NEW_VAULT</h3>
+          <button id="vault-modal-close"
+            class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Enter a name for the new vault. This will create the required folder structure (global, inbox, story, character, location, definition, topics, assets) under your lore root.</p>
+          <input type="text" id="new-vault-name"
+            placeholder="e.g., fantasy_campaign"
+            style="width: 100%; padding: 10px; margin-top: 12px; background: rgba(30, 30, 40, 0.7); border: 1px solid var(--border-color); border-radius: 6px; color: var(--color-text); font-family: var(--font-ui); font-size: 0.9rem; outline: none;">
+        </div>
+        <div class="modal-footer">
+          <button id="btn-vault-modal-cancel"
+            class="btn btn-secondary">Cancel</button>
+          <button id="btn-vault-modal-submit"
+            class="btn btn-primary">Create Vault</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ambient Audio Player Dock -->
+    <div id="audio-dock" class="audio-dock"
+      style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1000; width: 320px; background: rgba(12, 12, 14, 0.95); border: 1px solid var(--color-primary); box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); border-radius: 8px; padding: 12px 16px; backdrop-filter: blur(12px); align-items: center; gap: 12px; transition: all 0.3s ease;">
+      <span class="audio-icon" style="font-size: 1.2rem;">🔊</span>
+      <div
+        style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1; min-width: 0;">
+        <span id="audio-title" class="audio-title"
+          style="font-size: 0.75rem; font-weight: 600; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-ui);">Ambient Track</span>
+        <audio id="global-audio-player" loop controls
+          style="width: 100%; height: 32px; margin-top: 6px;"></audio>
+      </div>
+      <button id="btn-close-audio"
+        style="font-size: 1.2rem; color: var(--color-text-muted); cursor: pointer; border: none; background: none; margin-left: 6px; font-weight: bold; line-height: 1;">&times;</button>
+    </div>
+
+    <!-- Client logic script -->
+    <script src="app.js"></script>
+  </body>
+</html>

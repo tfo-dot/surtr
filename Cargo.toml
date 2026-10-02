@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "surtr-protocol",
+    "surtr-engine",
+    "surtr-cli"
+]
+resolver = "2"
